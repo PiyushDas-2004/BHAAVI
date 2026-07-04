@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>For the Most Beautiful Girl in the World</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------------------------------------------------------
+     TOKENS
+  --------------------------------------------------------- */
+  :root{
+    --c-black:      #000000;
+    --c-navy:       #050815;
+    --c-deep-blue:  #0d1b3e;
+    --c-purple:     #7b2ff7;
+    --c-purple-light: #b98bff;
+    --c-pink:       #ff5da2;
+    --c-white-glow: #f6f1ff;
+
+    --font-display: 'Cormorant Garamond', 'Georgia', serif;
+    --font-ui:      'Poppins', -apple-system, sans-serif;
+
+    color-scheme: dark;
+  }
+
+  /* ---------------------------------------------------------
+     RESET / BASE
+  --------------------------------------------------------- */
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{
+    height:100%;
+    margin:0;
+    padding:0;
+    background:var(--c-black);
+    overflow-x:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+  body{
+    font-family:var(--font-ui);
+    color:#fff;
+    overscroll-behavior:none;
+  }
+  button{ font-family:inherit; border:none; background:none; }
+  h1,p{ margin:0; }
+
+  ::selection{ background:rgba(185,139,255,.35); }
+
+  /* soft vignette for depth, sits above the sky, below content */
+  body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 40%, rgba(0,0,0,.6) 100%);
+  }
+
+  #sky{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    display:block;
+  }
+
+  #app{
+    position:relative;
+    z-index:1;
+    min-height:100vh;
+    min-height:100dvh;
+    overflow:hidden;
+  }
+
+  /* ---------------------------------------------------------
+     STAGES
+  --------------------------------------------------------- */
+  .stage{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding: max(env(safe-area-inset-top),24px) 7vw max(env(safe-area-inset-bottom),24px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 1.1s ease;
+  }
+  .stage--active{ opacity:1; pointer-events:auto; }
+
+  /* ---------------------------------------------------------
+     INTRO STAGE
+  --------------------------------------------------------- */
+  .intro-glow-zone{
+    position:relative;
+    width:min(60vw,260px);
+    height:min(60vw,260px);
+    margin-bottom:-2rem;
+    pointer-events:none;
+  }
+  .glow-burst{
+    position:absolute;
+    inset:0;
+    margin:auto;
+    width:70%;
+    height:70%;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(185,139,255,.55) 35%, rgba(123,47,247,0) 70%);
+    opacity:0;
+    filter:blur(2px);
+  }
+  .glow-burst.show{ animation:glowBurst 1.5s ease-out forwards; }
+  @keyframes glowBurst{
+    0%  { opacity:0; transform:scale(.2); filter:blur(8px); }
+    40% { opacity:1; transform:scale(1.05); filter:blur(2px); }
+    100%{ opacity:0; transform:scale(1.7); filter:blur(12px); }
+  }
+  .gather-particle{
+    position:absolute;
+    width:4px; height:4px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:0 0 8px 2px rgba(185,139,255,.9);
+    opacity:0;
+    animation:gatherIn 950ms ease-in forwards;
+  }
+  @keyframes gatherIn{
+    0%  { opacity:0; transform:translate(0,0) scale(1); }
+    18% { opacity:1; }
+    100%{ opacity:0; transform:translate(var(--dx),var(--dy)) scale(.3); }
+  }
+
+  .headline{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-style:italic;
+    font-size:clamp(1.5rem, 6.4vw, 2.7rem);
+    line-height:1.35;
+    max-width:22ch;
+    color:var(--c-white-glow);
+  }
+  .headline.settled{ animation:floatGlow 5.5s ease-in-out infinite; }
+  @keyframes floatGlow{
+    0%,100%{ transform:translateY(0); filter:drop-shadow(0 0 10px rgba(185,139,255,.35)); }
+    50%    { transform:translateY(-6px); filter:drop-shadow(0 0 22px rgba(185,139,255,.6)); }
+  }
+
+  .word{ display:inline-block; white-space:nowrap; }
+  .letter{
+    display:inline-block;
+    opacity:0;
+    animation:letterIn 750ms cubic-bezier(.2,.7,.2,1) forwards;
+    will-change:transform,opacity,filter;
+  }
+  @keyframes letterIn{
+    0%  { opacity:0; transform:translateY(22px) scale(.85); filter:blur(8px); text-shadow:none; }
+    55% { opacity:1; filter:blur(0); }
+    100%{ opacity:1; transform:translateY(0) scale(1);
+          text-shadow:0 0 16px rgba(185,139,255,.85), 0 0 34px rgba(255,255,255,.4); }
+  }
+
+  .reveal-btn{
+    position:relative;
+    margin-top:2.6rem;
+    padding:1rem 2.7rem;
+    font-family:var(--font-ui);
+    font-weight:600;
+    font-size:1.05rem;
+    letter-spacing:.02em;
+    color:#fff;
+    background:linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.04));
+    border:1px solid rgba(255,255,255,.32);
+    border-radius:999px;
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    box-shadow:0 8px 30px rgba(123,47,247,.35), 0 0 40px rgba(255,93,162,.22);
+    overflow:hidden;
+    cursor:pointer;
+    touch-action:manipulation;
+    opacity:0;
+    transform:translateY(14px) scale(.94);
+    transition:opacity .6s ease, transform .6s ease, box-shadow .3s ease;
+  }
+  .reveal-btn.show{
+    opacity:1; transform:translateY(0) scale(1);
+    animation:btnFloat 4.6s ease-in-out .7s infinite;
+  }
+  .reveal-btn:hover{
+    box-shadow:0 10px 36px rgba(123,47,247,.5), 0 0 56px rgba(255,93,162,.4);
+  }
+  .reveal-btn:disabled{ cursor:default; opacity:.85; }
+  @keyframes btnFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-5px); } }
+
+  .reveal-btn::before{
+    content:'';
+    position:absolute;
+    inset:-2px;
+    border-radius:999px;
+    padding:2px;
+    background:conic-gradient(from 0deg, var(--c-purple), var(--c-pink), var(--c-purple-light), var(--c-purple));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    opacity:.85;
+    animation:spin 5s linear infinite;
+    z-index:-1;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  .ripple{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(255,255,255,.55);
+    transform:scale(0);
+    pointer-events:none;
+    animation:rippleAnim 650ms ease-out forwards;
+  }
+  @keyframes rippleAnim{ to{ transform:scale(1); opacity:0; } }
+
+  /* ---------------------------------------------------------
+     CAMERA STAGE
+  --------------------------------------------------------- */
+  .reveal-text{
+    font-family:var(--font-display);
+    font-style:italic;
+    font-weight:500;
+    font-size:clamp(1.35rem, 5.6vw, 2.3rem);
+    color:#fff;
+    max-width:20ch;
+    min-height:2.6em;
+    margin-bottom:1.6rem;
+    text-shadow:0 0 20px rgba(185,139,255,.6);
+  }
+  .reveal-text.fading .word{ transition:opacity .35s ease; opacity:0; }
+
+  .frame-wrap{
+    position:relative;
+    width:min(70vw,320px);
+    aspect-ratio:1/1;
+    margin:0 auto;
+  }
+  .frame-ring{
+    position:absolute;
+    inset:-16px;
+    border-radius:50%;
+    background:conic-gradient(from 0deg, var(--c-purple), var(--c-pink), var(--c-purple-light), var(--c-purple));
+    filter:blur(20px);
+    opacity:.8;
+    animation:spin 7s linear infinite;
+  }
+  .camera-frame{
+    position:relative;
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    overflow:hidden;
+    background:#000;
+    box-shadow:
+      0 0 40px rgba(185,139,255,.55),
+      0 0 90px rgba(255,93,162,.32),
+      inset 0 0 0 2px rgba(255,255,255,.25);
+    transform:scale(.85);
+    opacity:0;
+    transition:opacity .9s ease, transform .9s ease;
+  }
+  .stage--active .camera-frame{ opacity:1; transform:scale(1); }
+  #video{
+    width:100%; height:100%;
+    object-fit:cover;
+    /* mirrored so it reads like a real mirror, not a rear feed */
+    transform:scaleX(-1);
+  }
+
+  .fx-layer{
+    position:absolute;
+    inset:-32%;
+    pointer-events:none;
+  }
+  .fx-bit{
+    position:absolute;
+    opacity:0;
+    animation-name:fxFloat;
+    animation-timing-function:ease-out;
+    animation-fill-mode:forwards;
+    filter:drop-shadow(0 0 6px rgba(255,150,200,.8));
+  }
+  @keyframes fxFloat{
+    0%  { opacity:0; transform:translate(0,10px) scale(.6); }
+    15% { opacity:1; }
+    80% { opacity:1; }
+    100%{ opacity:0; transform:translate(var(--drift),-95px) scale(1.15); }
+  }
+
+  /* ---------------------------------------------------------
+     DENIED STAGE
+  --------------------------------------------------------- */
+  .denied-text{
+    font-family:var(--font-display);
+    font-size:clamp(1.2rem, 5vw, 1.7rem);
+    line-height:1.5;
+    max-width:24ch;
+    margin-bottom:2rem;
+    color:var(--c-white-glow);
+  }
+
+  /* ---------------------------------------------------------
+     ACCESSIBILITY
+  --------------------------------------------------------- */
+  .reveal-btn:focus-visible,
+  #video:focus-visible{
+    outline:2px solid var(--c-purple-light);
+    outline-offset:3px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+    }
+  }
+
+  noscript{
+    position:fixed; inset:0; z-index:9999;
+    display:flex; align-items:center; justify-content:center;
+    background:#000; color:#fff;
+    font-family:sans-serif; text-align:center; padding:2rem;
+  }
+</style>
+</head>
+<body>
+
+<noscript>This little surprise needs JavaScript turned on to work. ❤️</noscript>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<main id="app">
+
+  <!-- INTRO STAGE -->
+  <section id="stage-intro" class="stage stage--active">
+    <div class="intro-glow-zone" id="glowZone">
+      <div class="glow-burst" id="glowBurst"></div>
+    </div>
+    <h1 class="headline" id="headline">Are you ready to see the most beautiful girl in the whole world?</h1>
+    <button class="reveal-btn" id="revealBtn" type="button" aria-label="Reveal the surprise">
+      YASSS&nbsp;💖
+    </button>
+  </section>
+
+  <!-- CAMERA STAGE -->
+  <section id="stage-camera" class="stage" aria-live="polite">
+    <p class="reveal-text" id="revealText"></p>
+    <div class="frame-wrap">
+      <div class="frame-ring" aria-hidden="true"></div>
+      <div class="camera-frame">
+        <video id="video" autoplay playsinline muted></video>
+      </div>
+      <div class="fx-layer" id="fxLayer" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- DENIED / FALLBACK STAGE -->
+  <section id="stage-denied" class="stage">
+    <p class="denied-text">Aww! I needed your camera to reveal the surprise.<br>Please allow camera access and try again. ❤️</p>
+    <button class="reveal-btn" id="retryBtn" type="button">Try Again</button>
+  </section>
+
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  /* =========================================================
+     SHARED HELPERS
+  ========================================================= */
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  function animateLetters(el, { stagger = 32 } = {}) {
+    const text = el.textContent;
+    el.textContent = '';
+    let i = 0;
+    const words = text.split(' ');
+    words.forEach((word, wi) => {
+      const wordSpan = document.createElement('span');
+      wordSpan.className = 'word';
+      [...word].forEach((ch) => {
+        const letterSpan = document.createElement('span');
+        letterSpan.className = 'letter';
+        letterSpan.textContent = ch;
+        letterSpan.style.animationDelay = `${i * stagger}ms`;
+        wordSpan.appendChild(letterSpan);
+        i += 1;
+      });
+      el.appendChild(wordSpan);
+      if (wi < words.length - 1) {
+        el.appendChild(document.createTextNode(' '));
+      }
+    });
+    return i * stagger + 750; // total ms including final letter's own animation
+  }
+
+  /* =========================================================
+     NIGHT SKY — canvas starfield, shooting stars,
+     parallax, and the heart-constellation signature moment
+  ========================================================= */
+  const canvas = document.getElementById('sky');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+  let stars = [];
+  let shootingStars = [];
+  const pointer = { x: 0.5, y: 0.5 };
+
+  let constellationActive = false;
+  let constellationStart = 0;
+  let constellationPts = [];
+  const CONSTELLATION_DRAW_MS = 1800;
+  const CONSTELLATION_HOLD_MS = 2600;
+  const CONSTELLATION_FADE_MS = 1400;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    initStars();
+  }
+
+  function initStars() {
+    const count = Math.min(220, Math.max(90, Math.floor((W * H) / 9000)));
+    stars = [];
+    for (let i = 0; i < count; i += 1) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.3 + 0.3,
+        baseAlpha: Math.random() * 0.5 + 0.4,
+        speed: Math.random() * 0.6 + 0.15,
+        phase: Math.random() * Math.PI * 2,
+        depth: Math.random() * 0.6 + 0.2,
+      });
+    }
+  }
+
+  function heartPoints(cx, cy, scale, n = 18) {
+    const pts = [];
+    for (let i = 0; i < n; i += 1) {
+      const t = (i / n) * Math.PI * 2;
+      const x = 16 * Math.sin(t) ** 3;
+      const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+      pts.push({ x: cx + x * scale, y: cy + y * scale });
+    }
+    return pts;
+  }
+
+  function triggerConstellation() {
+    if (reducedMotion) return;
+    constellationPts = heartPoints(W * 0.5, Math.min(H * 0.24, 190), Math.min(W, H) * 0.017);
+    constellationActive = true;
+    constellationStart = performance.now();
+  }
+
+  function handleShootingStars() {
+    if (!reducedMotion && Math.random() < 0.006 && shootingStars.length < 2) {
+      shootingStars.push({
+        x: Math.random() * W * 0.6 + W * 0.2,
+        y: -10,
+        vx: 4 + Math.random() * 3,
+        vy: 3 + Math.random() * 2,
+        life: 0,
+        maxLife: 55 + Math.random() * 20,
+      });
+    }
+    for (let i = shootingStars.length - 1; i >= 0; i -= 1) {
+      const s = shootingStars[i];
+      s.x += s.vx; s.y += s.vy; s.life += 1;
+      const alpha = 1 - s.life / s.maxLife;
+      if (alpha <= 0) { shootingStars.splice(i, 1); continue; }
+      const grad = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 8, s.y - s.vy * 8);
+      grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(s.x - s.vx * 8, s.y - s.vy * 8);
+      ctx.stroke();
+    }
+  }
+
+  function drawConstellation(now) {
+    const elapsed = now - constellationStart;
+    const total = CONSTELLATION_DRAW_MS + CONSTELLATION_HOLD_MS + CONSTELLATION_FADE_MS;
+    if (elapsed > total) { constellationActive = false; return; }
+
+    let opacity = 1;
+    let drawCount = constellationPts.length;
+    if (elapsed < CONSTELLATION_DRAW_MS) {
+      const p = elapsed / CONSTELLATION_DRAW_MS;
+      drawCount = Math.max(1, Math.ceil(p * constellationPts.length));
+      opacity = p;
+    } else if (elapsed > CONSTELLATION_DRAW_MS + CONSTELLATION_HOLD_MS) {
+      const p = (elapsed - CONSTELLATION_DRAW_MS - CONSTELLATION_HOLD_MS) / CONSTELLATION_FADE_MS;
+      opacity = 1 - p;
+    }
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,215,235,${0.65 * opacity})`;
+    ctx.lineWidth = 1.4;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(255,150,200,0.8)';
+    ctx.beginPath();
+    for (let i = 0; i < drawCount; i += 1) {
+      const p = constellationPts[i];
+      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    for (let i = 0; i < drawCount; i += 1) {
+      const p = constellationPts[i];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function draw(now) {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < stars.length; i += 1) {
+      const s = stars[i];
+      const twinkle = 0.5 + 0.5 * Math.sin(now * 0.001 * s.speed + s.phase);
+      const alpha = s.baseAlpha * twinkle;
+      const px = s.x + (pointer.x - 0.5) * -18 * s.depth;
+      const py = s.y + (pointer.y - 0.5) * -18 * s.depth;
+      ctx.beginPath();
+      ctx.arc(px, py, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+      ctx.shadowBlur = s.r * 3;
+      ctx.shadowColor = 'rgba(180,150,255,0.6)';
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    handleShootingStars();
+    if (constellationActive) drawConstellation(now);
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('mousemove', (e) => {
+    pointer.x = e.clientX / W; pointer.y = e.clientY / H;
+  });
+  window.addEventListener('deviceorientation', (e) => {
+    if (e.gamma == null || e.beta == null) return;
+    pointer.x = 0.5 + (e.gamma / 90) * 0.5;
+    pointer.y = 0.5 + ((e.beta - 45) / 90) * 0.5;
+  }, true);
+
+  resize();
+  requestAnimationFrame(draw);
+
+  /* =========================================================
+     INTRO GATHER-PARTICLE BURST
+  ========================================================= */
+  function spawnGatherParticles(container) {
+    const rect = container.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    for (let i = 0; i < 14; i += 1) {
+      const p = document.createElement('span');
+      p.className = 'gather-particle';
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 90;
+      const startX = cx + Math.cos(angle) * dist;
+      const startY = cy + Math.sin(angle) * dist;
+      p.style.left = `${startX}px`;
+      p.style.top = `${startY}px`;
+      p.style.setProperty('--dx', `${cx - startX}px`);
+      p.style.setProperty('--dy', `${cy - startY}px`);
+      p.style.animationDelay = `${Math.random() * 150}ms`;
+      container.appendChild(p);
+      setTimeout(() => p.remove(), 1500);
+    }
+  }
+
+  /* =========================================================
+     AMBIENT AUDIO — synthesized, no external files
+  ========================================================= */
+  let actx = null;
+  let masterGain = null;
+
+  function initAudio() {
+    if (actx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = new AC();
+    masterGain = actx.createGain();
+    masterGain.gain.value = 0.35;
+    masterGain.connect(actx.destination);
+    startAmbientPad();
+  }
+
+  function startAmbientPad() {
+    const freqs = [196.0, 246.94, 293.66]; // soft G3-B3-D4 chord
+    const padGain = actx.createGain();
+    padGain.gain.value = 0;
+    const filter = actx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 900;
+    filter.connect(padGain);
+    padGain.connect(masterGain);
+
+    freqs.forEach((f, i) => {
+      const osc = actx.createOscillator();
+      osc.type = i === 1 ? 'triangle' : 'sine';
+      osc.frequency.value = f;
+      osc.detune.value = (i - 1) * 4;
+      osc.connect(filter);
+      osc.start();
+    });
+
+    const lfo = actx.createOscillator();
+    lfo.frequency.value = 0.07;
+    const lfoGain = actx.createGain();
+    lfoGain.gain.value = 220;
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start();
+
+    const now = actx.currentTime;
+    padGain.gain.linearRampToValueAtTime(0.05, now + 2.5);
+  }
+
+  function playSparkleChime() {
+    if (!actx) return;
+    const now = actx.currentTime;
+    const notes = [783.99, 987.77, 1174.66, 1567.98]; // ascending sparkle
+    notes.forEach((freq, i) => {
+      const osc = actx.createOscillator();
+      const g = actx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      osc.connect(g);
+      g.connect(masterGain);
+      const t = now + i * 0.09;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.55);
+    });
+  }
+
+  /* =========================================================
+     FLOATING HEARTS & SPARKLES AROUND THE CAMERA FRAME
+  ========================================================= */
+  const fxLayer = document.getElementById('fxLayer');
+  let fxInterval = null;
+
+  function spawnFloatingBit() {
+    if (fxLayer.children.length > 16) return;
+    const el = document.createElement('span');
+    const isHeart = Math.random() < 0.5;
+    el.className = 'fx-bit';
+    el.textContent = isHeart ? '💗' : '✨';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 30 + Math.random() * 16;
+    el.style.left = `${50 + Math.cos(angle) * dist}%`;
+    el.style.top = `${50 + Math.sin(angle) * dist}%`;
+    el.style.setProperty('--drift', `${Math.random() * 40 - 20}px`);
+    el.style.fontSize = `${12 + Math.random() * 10}px`;
+    el.style.animationDuration = `${2600 + Math.random() * 1400}ms`;
+    el.addEventListener('animationend', () => el.remove());
+    fxLayer.appendChild(el);
+  }
+
+  function startFx() {
+    if (fxInterval || reducedMotion) return;
+    fxInterval = setInterval(spawnFloatingBit, 420);
+  }
+
+  /* =========================================================
+     STAGE CONTROL
+  ========================================================= */
+  const stageIntro = document.getElementById('stage-intro');
+  const stageCamera = document.getElementById('stage-camera');
+  const stageDenied = document.getElementById('stage-denied');
+  const stages = { intro: stageIntro, camera: stageCamera, denied: stageDenied };
+
+  function goToStage(name) {
+    Object.values(stages).forEach((s) => s.classList.remove('stage--active'));
+    stages[name].classList.add('stage--active');
+  }
+
+  /* =========================================================
+     INTRO SEQUENCE
+  ========================================================= */
+  const glowZone = document.getElementById('glowZone');
+  const glowBurst = document.getElementById('glowBurst');
+  const headline = document.getElementById('headline');
+  const revealBtn = document.getElementById('revealBtn');
+
+  async function runIntroSequence() {
+    await wait(1000); // the screen stays dark for a beat first
+    glowBurst.classList.add('show');
+    spawnGatherParticles(glowZone);
+    await wait(reducedMotion ? 0 : 900);
+    const headlineDuration = animateLetters(headline, { stagger: 30 });
+    await wait(reducedMotion ? 0 : headlineDuration);
+    headline.classList.add('settled');
+    await wait(2000);
+    revealBtn.classList.add('show');
+  }
+
+  revealBtn.addEventListener('pointerdown', (e) => {
+    const rect = revealBtn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 1.8;
+    const span = document.createElement('span');
+    span.className = 'ripple';
+    span.style.width = `${size}px`;
+    span.style.height = `${size}px`;
+    span.style.left = `${(e.clientX ?? rect.left + rect.width / 2) - rect.left - size / 2}px`;
+    span.style.top = `${(e.clientY ?? rect.top + rect.height / 2) - rect.top - size / 2}px`;
+    revealBtn.appendChild(span);
+    setTimeout(() => span.remove(), 700);
+  });
+
+  /* =========================================================
+     CAMERA REVEAL SEQUENCE
+  ========================================================= */
+  const video = document.getElementById('video');
+  const revealText = document.getElementById('revealText');
+
+  async function startCameraSequence() {
+    startFx();
+    revealText.textContent = 'There she is…';
+    animateLetters(revealText, { stagger: 34 });
+    await wait(2000);
+
+    revealText.classList.add('fading');
+    await wait(reducedMotion ? 0 : 380);
+    revealText.classList.remove('fading');
+    revealText.textContent = 'The most beautiful girl in the whole world ❤️';
+    animateLetters(revealText, { stagger: 26 });
+
+    triggerConstellation();
+  }
+
+  async function requestCameraAndReveal() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      goToStage('denied');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      });
+      video.srcObject = stream;
+      goToStage('camera');
+      startCameraSequence();
+    } catch (err) {
+      goToStage('denied');
+    }
+  }
+
+  revealBtn.addEventListener('click', () => {
+    revealBtn.disabled = true;
+    initAudio();
+    playSparkleChime();
+    requestCameraAndReveal();
+  });
+
+  document.getElementById('retryBtn').addEventListener('click', () => {
+    initAudio();
+    playSparkleChime();
+    requestCameraAndReveal();
+  });
+
+  runIntroSequence();
+})();
+</script>
+</body>
+</html>
