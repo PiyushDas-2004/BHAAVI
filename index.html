@@ -535,6 +535,10 @@
   let stars = [];
   let shootingStars = [];
   const pointer = { x: 0.5, y: 0.5 };
+  const targetPointer = { x: 0.5, y: 0.5 };
+  const POINTER_EASE = 0.08;
+  const MAX_TILT_DEG = 24;
+  const TILT_RANGE_PX = 34;
 
   let constellationActive = false;
   let constellationStart = 0;
@@ -658,6 +662,10 @@
   }
 
   function draw(now) {
+    pointer.x += (targetPointer.x - pointer.x) * POINTER_EASE;
+    pointer.y += (targetPointer.y - pointer.y) * POINTER_EASE;
+    const idleX = Math.sin(now * 0.00057) * 1.5;
+    const idleY = Math.cos(now * 0.00041) * 1.4;
     ctx.clearRect(0, 0, W, H);
     for (let i = 0; i < stars.length; i += 1) {
       const s = stars[i];
@@ -665,8 +673,8 @@
       const flashElapsed = now - flashBoostStart;
       const flashFactor = flashElapsed < FLASH_BOOST_MS ? 1 - flashElapsed / FLASH_BOOST_MS : 0;
       const alpha = Math.min(1, s.baseAlpha * twinkle + flashFactor * 0.85);
-      const px = s.x + (pointer.x - 0.5) * -18 * s.depth;
-      const py = s.y + (pointer.y - 0.5) * -18 * s.depth;
+      const px = s.x + (pointer.x - 0.5) * -18 * s.depth + idleX * s.depth;
+      const py = s.y + (pointer.y - 0.5) * -18 * s.depth + idleY * s.depth;
       ctx.beginPath();
       ctx.arc(px, py, s.r, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
@@ -682,13 +690,26 @@
 
   window.addEventListener('resize', resize);
   window.addEventListener('mousemove', (e) => {
-    pointer.x = e.clientX / W; pointer.y = e.clientY / H;
+    targetPointer.x = e.clientX / W; targetPointer.y = e.clientY / H;
   });
   window.addEventListener('deviceorientation', (e) => {
     if (e.gamma == null || e.beta == null) return;
-    pointer.x = 0.5 + (e.gamma / 90) * 0.5;
-    pointer.y = 0.5 + ((e.beta - 45) / 90) * 0.5;
+    const gamma = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, e.gamma));
+    const beta = Math.max(-MAX_TILT_DEG, Math.min(MAX_TILT_DEG, e.beta - 45));
+    targetPointer.x = 0.5 + (gamma / MAX_TILT_DEG) * (TILT_RANGE_PX / 18);
+    targetPointer.y = 0.5 + (beta / MAX_TILT_DEG) * (TILT_RANGE_PX / 18);
   }, true);
+
+  // iOS Safari requires an explicit user gesture before it will grant
+  // motion/orientation access — this is separate from the reveal button
+  // so nothing about the existing intro/camera flow is touched.
+  function requestOrientationPermission() {
+    const DOE = window.DeviceOrientationEvent;
+    if (DOE && typeof DOE.requestPermission === 'function') {
+      DOE.requestPermission().catch(() => {});
+    }
+  }
+  window.addEventListener('pointerdown', requestOrientationPermission, { once: true });
 
   resize();
   requestAnimationFrame(draw);
